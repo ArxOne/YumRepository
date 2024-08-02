@@ -15,6 +15,13 @@ internal static class RpmDictionaryReader
         {
             if (value is null)
                 return null;
+            if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                valueType = valueType.GetGenericArguments()[0];
+            if (valueType == typeof(string))
+            {
+                if (value.GetType() == typeof(string[]))
+                    return string.Join(Environment.NewLine, (IEnumerable<string>)value);
+            }
             return Convert.ChangeType(value, valueType);
         }
 

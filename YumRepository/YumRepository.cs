@@ -1,6 +1,8 @@
 ﻿
 using System.Text;
+using ArxOne.Yum.Repodata;
 using ArxOne.Yum.Rpm;
+using ArxOne.Yum.Xml;
 
 namespace ArxOne.Yum;
 
@@ -24,21 +26,47 @@ public class YumRepository
      */
     public IEnumerable<(string Path, Delegate Handler)> GetRoutes(GetWithMimeType getWithMimeType)
     {
+        var primaryXml = GetPrimaryXml();
         yield return ($"{_source.BasePath}/{_source.ConfigName}", () => GetConfiguration(getWithMimeType));
         yield return ($"{_source.BasePath}/repodata/primary.xml", () => GetPrimary(getWithMimeType));
+        foreach (var localSource in _source.LocalSources)
+            yield return ($"{_source.BasePath}/{ToUriPath(localSource)}/{{package}}.rpm", (string package) => GetRpm(localSource, package, getWithMimeType));
     }
 
-    private object GetPrimary(GetWithMimeType getWithMimeType)
+    private static string ToUriPath(string localSource)
+    {
+        return localSource.Replace('\\', '/');
+    }
+
+    private static object GetRpm(string localSource, string package, GetWithMimeType getWithMimeType)
+    {
+        var rpmBytes = File.ReadAllBytes(Path.Combine(localSource, $"{package}.rpm"));
+        return getWithMimeType(rpmBytes, "application/x-redhat-package-manager");
+    }
+
+    private string GetPrimaryXml()
+    {
+        var metadata = new Metadata(GetRpmInfo());
+        using var xmlWriter = new StringWriter();
+        XWriter.Write(xmlWriter, metadata);
+        return xmlWriter.ToString();
+    }
+
+    private IEnumerable<RpmInfo> GetRpmInfo()
     {
         foreach (var localSource in _source.LocalSources)
         {
             foreach (var rpmPath in Directory.GetFiles(localSource, "*.rpm"))
             {
                 var (signature, header) = _getRpmInformation(rpmPath);
-                var rpmInfo = new RpmInfo(signature, header);
+                var rpmInfo = new RpmInfo(signature, header, new FileInfo(rpmPath).Length) { Location = new(ToUriPath(rpmPath)) };
+                yield return rpmInfo;
             }
         }
+    }
 
+    private object GetPrimary(GetWithMimeType getWithMimeType)
+    {
         return getWithMimeType(null, "applicatiom/xml");
     }
 

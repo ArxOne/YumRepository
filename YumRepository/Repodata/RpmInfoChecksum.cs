@@ -2,16 +2,14 @@
 
 namespace ArxOne.Yum.Rpm;
 
-public record RpmInfoChecksum
+public record RepomdChecksum
 {
     [XAttribute("type")] public string? Type { get; set; }
-    [XAttribute("pkgid")] public string? Pkgid { get; init; }
     [XText] public string? Checksum { get; set; }
 
-    public RpmInfoChecksum(IReadOnlyDictionary<string, object?> signature)
+    public RepomdChecksum(IReadOnlyDictionary<string, object?> signature)
     {
-        if (TryLoad("sha2", signature) || TryLoad("sha1", signature))
-            Pkgid = "YES";
+        _ = TryLoad("sha2", signature) || TryLoad("sha1", signature);
     }
 
     private bool TryLoad(string algorithm, IReadOnlyDictionary<string, object?> signature)

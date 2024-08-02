@@ -1,8 +1,5 @@
-﻿using System.Xml.Serialization;
+﻿using ArxOne.Yum.Xml;
 
 namespace ArxOne.Yum.Rpm;
 
-public record RpmInfoLocation
-{
-    [XmlAttribute("href")] public Uri? Href { get; init; }
-}
+public record RpmInfoLocation([property: XAttribute("href")] string Href);

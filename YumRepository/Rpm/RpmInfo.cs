@@ -1,23 +1,34 @@
-﻿using System.Xml.Serialization;
+﻿using ArxOne.Yum.Xml;
 
 namespace ArxOne.Yum.Rpm;
 
 public record RpmInfo
 {
-    [XmlElement("name")] public string Name { get; init; }
-    [XmlElement("arch")] public string Arch { get; init; }
-    [XmlElement("version")] public RpmInfoVersion Version { get; init; }
-    [XmlElement("checksum")] public RpmInfoChecksum Checksum { get; init; }
-    [XmlElement("summary")] public string? Summary { get; init; }
-    [XmlElement("description")] public string? Description { get; init; }
-    [XmlElement("packager")] public string? Packager { get; init; }
-    [XmlElement("url")] public string? Url { get; init; }
-    [XmlElement("time")] public RpmInfoTime Time { get; init; }
-    [XmlElement("size")] public RpmInfoSize Size { get; init; }
+    [XAttribute("type")] public string Type { get; init; } = "rpm";
 
-    public RpmInfo(IReadOnlyDictionary<string, object?> signature, IReadOnlyDictionary<string, object?> header)
+    [XElement("name")] public string Name { get; init; }
+    [XElement("arch")] public string Arch { get; init; }
+    [XElement("version")] public RpmInfoVersion Version { get; init; }
+    [XElement("checksum")] public RpmInfoChecksum Checksum { get; init; }
+    [XElement("summary")] public string? Summary { get; init; }
+    [XElement("description")] public string? Description { get; init; }
+    [XElement("packager")] public string? Packager { get; init; }
+    [XElement("url")] public string? Url { get; init; }
+    [XElement("time")] public RpmInfoTime Time { get; init; }
+    [XElement("size")] public RpmInfoSize Size { get; init; }
+    [XElement("location")] public RpmInfoLocation Location { get; init; }
+
+    public RpmInfo(IReadOnlyDictionary<string, object?> signature, IReadOnlyDictionary<string, object?> header, long? rpmSize)
     {
         Name = header.GetTag<string>("name")!;
         Arch = header.GetTag<string>("arch")!;
+        Version = new(header);
+        Checksum = new(signature);
+        Summary = header.GetTag<string>("summary");
+        Description = header.GetTag<string>("description");
+        Packager = header.GetTag<string>("packager");
+        Url = header.GetTag<string>("url");
+        Time = new(header);
+        Size = new(header, rpmSize);
     }
 }

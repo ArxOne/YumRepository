@@ -20,7 +20,7 @@ public record YumRepositorySource
         BasePath = basePath;
         Name = basePath[(basePath.IndexOf('/') + 1)..];
         ID = Name.Replace("/", "");
-        ConfigName = ID + ".config";
+        ConfigName = ID + ".repo";
         LocalSources = localSources.ToList();
     }
 }
