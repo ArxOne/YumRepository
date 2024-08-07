@@ -1,11 +1,18 @@
-﻿using ArxOne.Yum.Xml;
+﻿using ArxOne.Yum.Rpm;
+using ArxOne.Yum.Xml;
 
-namespace ArxOne.Yum.Rpm;
+namespace ArxOne.Yum.Repodata;
 
 public record RepomdChecksum
 {
     [XAttribute("type")] public string? Type { get; set; }
     [XText] public string? Checksum { get; set; }
+
+    public RepomdChecksum(string checksum, string type)
+    {
+        Checksum = checksum;
+        Type = type;
+    }
 
     public RepomdChecksum(IReadOnlyDictionary<string, object?> signature)
     {

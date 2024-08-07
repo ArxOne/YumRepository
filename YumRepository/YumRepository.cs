@@ -1,4 +1,7 @@
 ﻿
+using System.Collections.Immutable;
+using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 using ArxOne.Yum.Repodata;
 using ArxOne.Yum.Rpm;
@@ -26,9 +29,17 @@ public class YumRepository
      */
     public IEnumerable<(string Path, Delegate Handler)> GetRoutes(GetWithMimeType getWithMimeType)
     {
-        var primaryXml = GetPrimaryXml();
+        var repomdData = GetRepomdData().ToImmutableArray();
+        var repomd = new Repomd
+        {
+            Revision = DateTimeOffset.Now.ToUnixTimeSeconds(),
+            Data = repomdData.Select(r => r.Data).ToArray(),
+        };
         yield return ($"{_source.BasePath}/{_source.ConfigName}", () => GetConfiguration(getWithMimeType));
-        yield return ($"{_source.BasePath}/repodata/primary.xml", () => GetPrimary(getWithMimeType));
+        foreach (var (mdData, bytes) in repomdData)
+            yield return ( $"{_source.BasePath}/{mdData.Location.Href}", () => getWithMimeType(bytes, "application/gzip"));
+        var repoXml = XWriter.ToBytes(repomd);
+        yield return ($"{_source.BasePath}/repodata/repo.xml", () => getWithMimeType(repoXml, "application/xml"));
         foreach (var localSource in _source.LocalSources)
             yield return ($"{_source.BasePath}/{ToUriPath(localSource)}/{{package}}.rpm", (string package) => GetRpm(localSource, package, getWithMimeType));
     }
@@ -42,6 +53,31 @@ public class YumRepository
     {
         var rpmBytes = File.ReadAllBytes(Path.Combine(localSource, $"{package}.rpm"));
         return getWithMimeType(rpmBytes, "application/x-redhat-package-manager");
+    }
+
+    private IEnumerable<(RepomdData Data, byte[] Bytes)> GetRepomdData()
+    {
+        yield return GetRepomdData(GetPrimaryXml(), "primary");
+    }
+
+    private (RepomdData Data, byte[] Bytes) GetRepomdData(string rawFile, string type)
+    {
+        var rawData = Encoding.UTF8.GetBytes(rawFile);
+        using var compressedStream = new MemoryStream();
+        using (var compressionStream = new GZipStream(compressedStream, CompressionLevel.SmallestSize))
+            compressionStream.Write(rawData);
+        var compressedData = compressedStream.ToArray();
+        var rawHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(rawData)), "sha256");
+        var compressedHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(compressedData)), "sha256");
+        return (new RepomdData
+        {
+            Checksum = compressedHash,
+            OpenChecksum = rawHash,
+            Size = compressedData.Length,
+            OpenSize = rawData.Length,
+            Type = type,
+            Location = new($"repodata/{type}.xml.gz")
+        }, compressedData);
     }
 
     private string GetPrimaryXml()
@@ -82,7 +118,7 @@ baseurl={uri.Uri}
 repo_gpgcheck=0
 gpgcheck=0
 enabled=1
-";
+".Replace("\r", "");
         return getWithMimeType(Encoding.UTF8.GetBytes(confText), "text/plain");
     }
 

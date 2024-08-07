@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Reflection;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -12,6 +13,14 @@ public static class XWriter
         var xDocument = ToDocument(o);
         using var xmlWriter = XmlWriter.Create(writer, new XmlWriterSettings { Indent = true });
         xDocument.WriteTo(xmlWriter);
+    }
+
+    public static byte[] ToBytes(object o)
+    {
+        using var textWriter = new StringWriter();
+        Write(textWriter,o);
+        var xml = textWriter.ToString();
+        return Encoding.UTF8.GetBytes(xml);
     }
 
     public static XDocument ToDocument(object o)
