@@ -1,4 +1,4 @@
-﻿using ArxOne.Yum.Rpm;
+﻿using ArxOne.Yum.Utility;
 using ArxOne.Yum.Xml;
 
 namespace ArxOne.Yum.Repodata;

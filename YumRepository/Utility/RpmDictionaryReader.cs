@@ -1,12 +1,10 @@
-﻿using ArxOne.Yum.Utility;
-
-namespace ArxOne.Yum.Rpm;
+﻿namespace ArxOne.Yum.Utility;
 
 internal static class RpmDictionaryReader
 {
     public static TValue? GetTag<TValue>(this IReadOnlyDictionary<string, object?> tags, string tag)
     {
-        return (TValue?)GetTag(tags, tag, typeof(TValue));
+        return (TValue?)tags.GetTag(tag, typeof(TValue));
     }
 
     public static object? GetTag(this IReadOnlyDictionary<string, object?> tags, string tag, Type valueType)

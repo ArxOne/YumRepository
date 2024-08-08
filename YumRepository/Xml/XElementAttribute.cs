@@ -8,7 +8,9 @@ public class XElementAttribute : Attribute
     public string Name { get; }
     public string? Namespace { get; }
 
-    public XName XName => Namespace is null ? Name : XName.Get(Name, Namespace);
+    public XName GetXName(string defaultNamespace = "") => Namespace is null
+        ? XName.Get(Name, defaultNamespace)
+        : XName.Get(Name, Namespace);
 
     public XElementAttribute(string name, string? @namespace = null)
     {

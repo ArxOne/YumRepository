@@ -1,13 +1,14 @@
-﻿using ArxOne.Yum.Xml;
+﻿using ArxOne.Yum.Utility;
+using ArxOne.Yum.Xml;
 
-namespace ArxOne.Yum.Rpm;
+namespace ArxOne.Yum.Repodata;
 
-public record RpmInfoTime
+public record Time
 {
     [XAttribute("file")] public long? File { get; init; }
     [XAttribute("build")] public long? Build { get; init; }
 
-    public RpmInfoTime(IReadOnlyDictionary<string, object?> header)
+    public Time(IReadOnlyDictionary<string, object?> header)
     {
         File = header.GetTag<long?>("filemtimes");
         Build = header.GetTag<long?>("buildtime");

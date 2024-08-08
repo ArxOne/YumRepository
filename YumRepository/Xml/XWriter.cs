@@ -17,24 +17,24 @@ public static class XWriter
 
     public static byte[] ToBytes(object o)
     {
-        using var textWriter = new StringWriter();
-        Write(textWriter,o);
-        var xml = textWriter.ToString();
-        return Encoding.UTF8.GetBytes(xml);
+        using var memoryStream = new MemoryStream();
+        using var textWriter = new StreamWriter(memoryStream, Encoding.UTF8);
+        Write(textWriter, o);
+        return memoryStream.ToArray();
     }
 
     public static XDocument ToDocument(object o)
     {
         var document = new XDocument();
         var rootNameAttribute = o.GetType().GetCustomAttribute<XElementAttribute>();
-        var rootName = rootNameAttribute?.XName ?? o.GetType().Name;
+        var rootName = rootNameAttribute?.GetXName() ?? o.GetType().Name;
         var rootElement = new XElement(rootName);
         document.Add(rootElement);
-        FillElement(rootElement, o);
+        FillElement(rootElement, o, rootName.NamespaceName);
         return document;
     }
 
-    private static void FillElement(XElement node, object o)
+    private static void FillElement(XElement node, object o, string currentNamespace = "")
     {
         if (o.GetType().FullName.StartsWith("System."))
         {
@@ -51,10 +51,11 @@ public static class XWriter
                 node.SetAttributeValue(attributeName, value.ToString());
                 continue;
             }
-            if (IsElement(propertyInfo, out var elementName))
+            if (IsElement(propertyInfo, currentNamespace, out var elementName))
             {
                 var child = new XElement(elementName);
-                FillElement(child, value);
+                currentNamespace = elementName.NamespaceName;
+                FillElement(child, value, currentNamespace);
                 node.Add(child);
                 continue;
             }
@@ -62,8 +63,8 @@ public static class XWriter
             {
                 foreach (var item in (IEnumerable)value)
                 {
-                    var child = new XElement(itemName);
-                    FillElement(child, item);
+                    var child = new XElement(XName.Get(itemName, currentNamespace));
+                    FillElement(child, item, currentNamespace);
                     node.Add(child);
                 }
                 continue;
@@ -88,7 +89,7 @@ public static class XWriter
         return true;
     }
 
-    private static bool IsElement(PropertyInfo propertyInfo, out XName elementName)
+    private static bool IsElement(PropertyInfo propertyInfo, string? currentNamespace, out XName elementName)
     {
         var a = propertyInfo.GetCustomAttribute<XElementAttribute>();
         if (a is null)
@@ -96,7 +97,7 @@ public static class XWriter
             elementName = null;
             return false;
         }
-        elementName = a.XName;
+        elementName = a.GetXName(currentNamespace);
         return true;
     }
 

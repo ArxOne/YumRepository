@@ -1,14 +1,15 @@
-﻿using ArxOne.Yum.Xml;
+﻿using ArxOne.Yum.Utility;
+using ArxOne.Yum.Xml;
 
-namespace ArxOne.Yum.Rpm;
+namespace ArxOne.Yum.Repodata;
 
-public record RpmInfoChecksum
+public record Checksum
 {
     [XAttribute("type")] public string? Type { get; set; }
     [XAttribute("pkgid")] public string? Pkgid { get; init; }
-    [XText] public string? Checksum { get; set; }
+    [XText] public string? Value { get; set; }
 
-    public RpmInfoChecksum(IReadOnlyDictionary<string, object?> signature)
+    public Checksum(IReadOnlyDictionary<string, object?> signature)
     {
         if (TryLoad("sha2", signature) || TryLoad("sha1", signature))
             Pkgid = "YES";
@@ -20,7 +21,7 @@ public record RpmInfoChecksum
         if (checksum is null)
             return false;
         Type = algorithm;
-        Checksum = checksum;
+        Value = checksum;
         return true;
     }
 }

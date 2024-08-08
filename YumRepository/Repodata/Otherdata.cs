@@ -2,8 +2,8 @@
 
 namespace ArxOne.Yum.Repodata;
 
-[XElement("metadata", "http://linux.duke.edu/metadata/common")]
-public class Metadata
+[XElement("otherdata", "http://linux.duke.edu/metadata/common")]
+public class Otherdata
 {
     [XAttribute("packages")]
     public int PackagesCount { get; set; }
@@ -11,7 +11,7 @@ public class Metadata
     [XArrayItem("package")]
     public Package[] Packages { get; set; }
 
-    public Metadata(IEnumerable<Package> rpmInfo)
+    public Otherdata(IEnumerable<Package> rpmInfo)
     {
         Packages = rpmInfo.ToArray();
         PackagesCount = Packages.Length;

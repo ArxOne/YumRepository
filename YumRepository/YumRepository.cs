@@ -4,13 +4,24 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using ArxOne.Yum.Repodata;
-using ArxOne.Yum.Rpm;
 using ArxOne.Yum.Xml;
 
 namespace ArxOne.Yum;
 
 public class YumRepository
 {
+    private record RpmInfo(IReadOnlyDictionary<string, object?> Signature, IReadOnlyDictionary<string, object?> Header, string RpmPath)
+    {
+        public Package GetForMetadata()
+        {
+            return Package.ForMetadata(Signature, Header, new FileInfo(RpmPath).Length) with { Location = new(ToUriPath(RpmPath)) };
+        }
+        public Package GetForOtherdata()
+        {
+            return Package.ForOtherdata(Signature, Header);
+        }
+    }
+
     private readonly GetRpmInformation _getRpmInformation;
     private readonly YumRepositorySource _source;
 
@@ -37,14 +48,14 @@ public class YumRepository
         };
         yield return ($"{_source.BasePath}/{_source.ConfigName}", () => GetConfiguration(getWithMimeType));
         foreach (var (mdData, bytes) in repomdData)
-            yield return ( $"{_source.BasePath}/{mdData.Location.Href}", () => getWithMimeType(bytes, "application/gzip"));
-        var repoXml = XWriter.ToBytes(repomd);
-        yield return ($"{_source.BasePath}/repodata/repo.xml", () => getWithMimeType(repoXml, "application/xml"));
+            yield return ($"{_source.BasePath}/{mdData.Location.Href}", () => getWithMimeType(bytes, "application/gzip"));
+        var repomdXml = XWriter.ToBytes(repomd);
+        yield return ($"{_source.BasePath}/repodata/repomd.xml", () => getWithMimeType(repomdXml, "application/xml"));
         foreach (var localSource in _source.LocalSources)
             yield return ($"{_source.BasePath}/{ToUriPath(localSource)}/{{package}}.rpm", (string package) => GetRpm(localSource, package, getWithMimeType));
     }
 
-    private static string ToUriPath(string localSource)
+    internal static string ToUriPath(string localSource)
     {
         return localSource.Replace('\\', '/');
     }
@@ -57,18 +68,19 @@ public class YumRepository
 
     private IEnumerable<(RepomdData Data, byte[] Bytes)> GetRepomdData()
     {
-        yield return GetRepomdData(GetPrimaryXml(), "primary");
+        var rpmInfo = GetRpmInfo().ToImmutableArray();
+        yield return GetRepomdData(GetPrimaryXml(rpmInfo), "primary");
+        yield return GetRepomdData(GetOtherXml(rpmInfo), "other");
     }
 
-    private (RepomdData Data, byte[] Bytes) GetRepomdData(string rawFile, string type)
+    private (RepomdData Data, byte[] Bytes) GetRepomdData(byte[] rawData, string type)
     {
-        var rawData = Encoding.UTF8.GetBytes(rawFile);
         using var compressedStream = new MemoryStream();
         using (var compressionStream = new GZipStream(compressedStream, CompressionLevel.SmallestSize))
             compressionStream.Write(rawData);
         var compressedData = compressedStream.ToArray();
-        var rawHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(rawData)), "sha256");
-        var compressedHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(compressedData)), "sha256");
+        var rawHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(rawData)).ToLower(), "sha256");
+        var compressedHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(compressedData)).ToLower(), "sha256");
         return (new RepomdData
         {
             Checksum = compressedHash,
@@ -80,12 +92,16 @@ public class YumRepository
         }, compressedData);
     }
 
-    private string GetPrimaryXml()
+    private byte[] GetPrimaryXml(IEnumerable<RpmInfo> rpmInfo)
     {
-        var metadata = new Metadata(GetRpmInfo());
-        using var xmlWriter = new StringWriter();
-        XWriter.Write(xmlWriter, metadata);
-        return xmlWriter.ToString();
+        var metadata = new Metadata(rpmInfo.Select(r => r.GetForMetadata()));
+        return XWriter.ToBytes(metadata);
+    }
+
+    private byte[] GetOtherXml(IEnumerable<RpmInfo> rpmInfo)
+    {
+        var metadata = new Metadata(rpmInfo.Select(r => r.GetForOtherdata()));
+        return XWriter.ToBytes(metadata);
     }
 
     private IEnumerable<RpmInfo> GetRpmInfo()
@@ -95,8 +111,7 @@ public class YumRepository
             foreach (var rpmPath in Directory.GetFiles(localSource, "*.rpm"))
             {
                 var (signature, header) = _getRpmInformation(rpmPath);
-                var rpmInfo = new RpmInfo(signature, header, new FileInfo(rpmPath).Length) { Location = new(ToUriPath(rpmPath)) };
-                yield return rpmInfo;
+                yield return new(signature, header, rpmPath);
             }
         }
     }
