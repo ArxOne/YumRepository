@@ -9,19 +9,10 @@ public record Checksum
     [XAttribute("pkgid")] public string? Pkgid { get; init; }
     [XText] public string? Value { get; set; }
 
-    public Checksum(IReadOnlyDictionary<string, object?> signature)
+    public Checksum(string hash, string type)
     {
-        if (TryLoad("sha2", signature) || TryLoad("sha1", signature))
-            Pkgid = "YES";
-    }
-
-    private bool TryLoad(string algorithm, IReadOnlyDictionary<string, object?> signature)
-    {
-        var checksum = signature.GetTag<string>(algorithm) ?? signature.GetTag<string>($"{algorithm}header");
-        if (checksum is null)
-            return false;
-        Type = algorithm;
-        Value = checksum;
-        return true;
+        Type = type;
+        Value = hash;
+        Pkgid = "YES";
     }
 }

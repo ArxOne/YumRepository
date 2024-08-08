@@ -21,7 +21,7 @@ public record Package
     [XElement("size")] public Size Size { get; init; }
     [XElement("location")] public Location Location { get; init; }
 
-    public static Package ForMetadata(IReadOnlyDictionary<string, object?> signature, IReadOnlyDictionary<string, object?> header, long? rpmSize)
+    public static Package ForMetadata(IReadOnlyDictionary<string, object?> header, long? rpmSize, string sha256Hash)
     {
         return new Package
         {
@@ -29,7 +29,7 @@ public record Package
             NameElement = header.GetTag<string>("name")!,
             ArchElement = header.GetTag<string>("arch")!,
             Version = new(header),
-            Checksum = new(signature),
+            Checksum = new(sha256Hash, "sha256"),
             Summary = header.GetTag<string>("summary"),
             Description = header.GetTag<string>("description"),
             Packager = header.GetTag<string>("packager"),
@@ -39,12 +39,11 @@ public record Package
         };
     }
 
-    public static Package ForOtherdata(IReadOnlyDictionary<string, object?> signature, IReadOnlyDictionary<string, object?> header)
+    public static Package ForOtherdata(IReadOnlyDictionary<string, object?> header, string sha256Hash)
     {
-        var checksum = new Checksum(signature);
         return new Package
         {
-            Pkgid = checksum.Value!,
+            Pkgid = sha256Hash,
             NameAttribute = header.GetTag<string>("name")!,
             ArchAttribute = header.GetTag<string>("arch")!,
             Version = new(header),

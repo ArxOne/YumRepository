@@ -10,15 +10,15 @@ namespace ArxOne.Yum;
 
 public class YumRepository
 {
-    private record RpmInfo(IReadOnlyDictionary<string, object?> Signature, IReadOnlyDictionary<string, object?> Header, string RpmPath)
+    private record RpmInfo(IReadOnlyDictionary<string, object?> Signature, IReadOnlyDictionary<string, object?> Header, string RpmPath, string Sha256Hash)
     {
         public Package GetForMetadata()
         {
-            return Package.ForMetadata(Signature, Header, new FileInfo(RpmPath).Length) with { Location = new(ToUriPath(RpmPath)) };
+            return Package.ForMetadata(Header, new FileInfo(RpmPath).Length, Sha256Hash) with { Location = new(ToUriPath(RpmPath)) };
         }
         public Package GetForOtherdata()
         {
-            return Package.ForOtherdata(Signature, Header);
+            return Package.ForOtherdata(Header, Sha256Hash);
         }
     }
 
@@ -111,14 +111,11 @@ public class YumRepository
             foreach (var rpmPath in Directory.GetFiles(localSource, "*.rpm"))
             {
                 var (signature, header) = _getRpmInformation(rpmPath);
-                yield return new(signature, header, rpmPath);
+                using var rpmStream = File.OpenRead(rpmPath);
+                var sha256Hash = Convert.ToHexString(SHA256.Create().ComputeHash(rpmStream)).ToLower();
+                yield return new(signature, header, rpmPath, sha256Hash);
             }
         }
-    }
-
-    private object GetPrimary(GetWithMimeType getWithMimeType)
-    {
-        return getWithMimeType(null, "applicatiom/xml");
     }
 
     private object GetConfiguration(GetWithMimeType getWithMimeType)

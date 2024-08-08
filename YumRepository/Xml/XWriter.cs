@@ -18,7 +18,7 @@ public static class XWriter
     public static byte[] ToBytes(object o)
     {
         using var memoryStream = new MemoryStream();
-        using var textWriter = new StreamWriter(memoryStream, Encoding.UTF8);
+        using var textWriter = new StreamWriter(memoryStream, new UTF8Encoding(false));
         Write(textWriter, o);
         return memoryStream.ToArray();
     }
@@ -48,7 +48,7 @@ public static class XWriter
                 continue;
             if (IsAttribute(propertyInfo, out var attributeName))
             {
-                node.SetAttributeValue(attributeName, value.ToString());
+                node.SetAttributeValue(XName.Get(attributeName), value.ToString());
                 continue;
             }
             if (IsElement(propertyInfo, currentNamespace, out var elementName))
