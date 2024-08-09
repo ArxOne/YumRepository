@@ -10,7 +10,7 @@ public record YumRepositorySource
 
     public string Name { get; set; }
 
-    public string ConfigName { get; set; }
+    public string RepoName { get; set; }
 
     public Func<Uri> GetRequestUri { get; set; }
 
@@ -20,7 +20,7 @@ public record YumRepositorySource
         BasePath = basePath;
         Name = basePath[(basePath.IndexOf('/') + 1)..];
         ID = Name.Replace("/", "");
-        ConfigName = ID + ".repo";
+        RepoName = ID + ".repo";
         LocalSources = localSources.ToList();
     }
 }

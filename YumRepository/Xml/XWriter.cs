@@ -29,6 +29,8 @@ public static class XWriter
         var rootNameAttribute = o.GetType().GetCustomAttribute<XElementAttribute>();
         var rootName = rootNameAttribute?.GetXName() ?? o.GetType().Name;
         var rootElement = new XElement(rootName);
+        foreach (var aliasAttribute in o.GetType().GetCustomAttributes<XNamespaceAliasAttribute>())
+            rootElement.Add(new XAttribute(XNamespace.Xmlns + aliasAttribute.Alias, aliasAttribute.Namespace));
         document.Add(rootElement);
         FillElement(rootElement, o, rootName.NamespaceName);
         return document;
@@ -55,7 +57,20 @@ public static class XWriter
             {
                 var child = new XElement(elementName);
                 currentNamespace = elementName.NamespaceName;
-                FillElement(child, value, currentNamespace);
+                if (propertyInfo.PropertyType.IsArray)
+                {
+                    foreach (var item in (IEnumerable)value)
+                    {
+                        var itemElementName = item.GetType().GetCustomAttribute<XElementAttribute>()?.GetXName(currentNamespace);
+                        if (itemElementName is null)
+                            continue;
+                        var itemElement = new XElement(itemElementName);
+                        FillElement(itemElement, item, currentNamespace);
+                        child.Add(itemElement);
+                    }
+                }
+                else
+                    FillElement(child, value, currentNamespace);
                 node.Add(child);
                 continue;
             }

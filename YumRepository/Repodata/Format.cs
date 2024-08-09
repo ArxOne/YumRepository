@@ -1,11 +1,7 @@
 ﻿using ArxOne.Yum.Utility;
-
-namespace ArxOne.Yum.Repodata;
-
 using ArxOne.Yum.Xml;
 
-[XElement("entry", "http://linux.duke.edu/metadata/rpm")]
-public record Entry([property: XAttribute("name")] string Name);
+namespace ArxOne.Yum.Repodata;
 
 public record Format
 {
@@ -35,11 +31,22 @@ public record Format
         Group = header.GetTag<string>("group");
         Buildhost = header.GetTag<string>("buildhost");
         SourceRpm = header.GetTag<string>("sourcerpm");
-        if (header.GetTag<string[]>("requirename") is { } requireNames)
-            Requires = requireNames.Select(n => new Entry(n)).ToArray();
-        if (header.GetTag<string[]>("providename") is { } provideName)
-            Provides = provideName.Select(n => new Entry(n)).ToArray();
-        if (header.GetTag<string[]>("conflictname") is { } conflictName)
-            Conflicts = conflictName.Select(n => new Entry(n)).ToArray();
+        Requires = GetEntries(header, "require");
+        Provides = GetEntries(header, "provide");
+        Conflicts = GetEntries(header, "conflict");
+    }
+
+    private Entry[]? GetEntries(IReadOnlyDictionary<string, object?> header, string baseName)
+    {
+        if (header.GetTag<string[]>(baseName + "name") is not { } names)
+            return null;
+        var ver = header.GetTag<string[]>(baseName + "version");
+        return GetEntries(names, ver).ToArray();
+    }
+
+    private static IEnumerable<Entry> GetEntries(string[] names, string[]? ver)
+    {
+        for (int index = 0; index < names.Length; index++)
+            yield return new Entry(names[index], ver?.ElementAt(index));
     }
 }

@@ -46,7 +46,7 @@ public class YumRepository
             Revision = DateTimeOffset.Now.ToUnixTimeSeconds(),
             Data = repomdData.Select(r => r.Data).ToArray(),
         };
-        yield return ($"{_source.BasePath}/{_source.ConfigName}", () => GetConfiguration(getWithMimeType));
+        yield return ($"{_source.BasePath}/{_source.RepoName}", () => GetConfiguration(getWithMimeType));
         foreach (var (mdData, bytes) in repomdData)
             yield return ($"{_source.BasePath}/{mdData.Location.Href}", () => getWithMimeType(bytes, "application/gzip"));
         var repomdXml = XWriter.ToBytes(repomd);

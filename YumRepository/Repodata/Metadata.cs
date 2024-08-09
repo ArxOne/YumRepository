@@ -3,6 +3,7 @@
 namespace ArxOne.Yum.Repodata;
 
 [XElement("metadata", "http://linux.duke.edu/metadata/common")]
+[XNamespaceAlias("rpm", "http://linux.duke.edu/metadata/rpm")]
 public record Metadata
 {
     [XAttribute("packages")]
