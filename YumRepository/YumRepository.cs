@@ -1,8 +1,11 @@
 ﻿
+using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using ArxOne.Yum.Cache;
 using ArxOne.Yum.Repodata;
 using ArxOne.Yum.Xml;
 
@@ -10,8 +13,19 @@ namespace ArxOne.Yum;
 
 public class YumRepository
 {
-    private record RpmInfo(IReadOnlyDictionary<string, object?> Signature, IReadOnlyDictionary<string, object?> Header, string RpmPath, string Sha256Hash)
+    private record RpmInfo
     {
+        public IReadOnlyDictionary<string, object?> Header { get; }
+        public string RpmPath { get; }
+        public string Sha256Hash { get; }
+
+        public RpmInfo(IReadOnlyDictionary<string, object?> header, string rpmPath, string sha256Hash)
+        {
+            Header = header.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+            RpmPath = rpmPath;
+            Sha256Hash = sha256Hash;
+        }
+
         public Package GetForMetadata()
         {
             return Package.ForMetadata(Header, new FileInfo(RpmPath).Length, Sha256Hash) with { Location = new(ToUriPath(RpmPath)) };
@@ -19,6 +33,13 @@ public class YumRepository
         public Package GetForOtherdata()
         {
             return Package.ForOtherdata(Header, Sha256Hash);
+        }
+
+        public void Deconstruct(out IReadOnlyDictionary<string, object?> Header, out string RpmPath, out string Sha256Hash)
+        {
+            Header = this.Header;
+            RpmPath = this.RpmPath;
+            Sha256Hash = this.Sha256Hash;
         }
     }
 
@@ -133,15 +154,19 @@ public class YumRepository
     private IEnumerable<RpmInfo> GetRpmInfo()
     {
         foreach (var localSource in _source.LocalSources)
-        {
             foreach (var rpmPath in Directory.GetFiles(localSource, "*.rpm"))
-            {
-                var (signature, header) = _getRpmInformation(rpmPath);
-                using var rpmStream = File.OpenRead(rpmPath);
-                var sha256Hash = Convert.ToHexString(SHA256.Create().ComputeHash(rpmStream)).ToLower();
-                yield return new(signature, header, rpmPath, sha256Hash);
-            }
-        }
+                yield return GetRpmInfo(rpmPath);
+    }
+
+    private RpmInfo GetRpmInfo(string rpmPath) => _source.Cache.Get(rpmPath, LoadRpmInfo);
+
+    private RpmInfo LoadRpmInfo(string rpmPath)
+    {
+        var (signature, header) = _getRpmInformation(rpmPath);
+        using var rpmStream = File.OpenRead(rpmPath);
+        var sha256Hash = Convert.ToHexString(SHA256.Create().ComputeHash(rpmStream)).ToLower();
+        var rpmInfo = new RpmInfo(header, rpmPath, sha256Hash);
+        return rpmInfo;
     }
 
     private object GetConfiguration(GetWithMimeType getWithMimeType)

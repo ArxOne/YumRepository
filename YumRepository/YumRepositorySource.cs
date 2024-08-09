@@ -1,4 +1,6 @@
-﻿namespace ArxOne.Yum;
+﻿using ArxOne.Yum.Cache;
+
+namespace ArxOne.Yum;
 
 public record YumRepositorySource
 {
@@ -13,6 +15,8 @@ public record YumRepositorySource
     public string RepoName { get; set; }
 
     public Func<Uri> GetRequestUri { get; set; }
+
+    public FileCache Cache { get; set; }
 
     public YumRepositorySource(Func<Uri> getRequestUri, string basePath, params string[] localSources)
     {

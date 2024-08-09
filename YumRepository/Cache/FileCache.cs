@@ -11,52 +11,43 @@ public class FileCache
         _rootPath = rootPath ?? Path.Combine(Path.GetTempPath(), "yum-repository", name);
     }
 
-    private string GetPath(FileCacheReference reference)
+    private string GetStoragePath(string path)
     {
-        var path = Path.Combine(_rootPath, reference.Distribution);
-        if (reference.Component is not null)
-        {
-            path = Path.Combine(path, reference.Component);
-            if (reference.Arch is not null)
-            {
-                path = Path.Combine(path, reference.Arch);
-            }
-        }
-        path = Path.Combine(path, reference.Name);
-        return path;
+        var storagePath = Path.Combine(_rootPath, path);
+        return storagePath;
     }
 
-    internal Stream DoGet(FileCacheReference reference)
+    internal Stream DoGet(string path)
     {
         lock (_lock)
         {
-            var path = GetPath(reference);
-            if (File.Exists(path))
-                return new MemoryStream(File.ReadAllBytes(path));
-            return new MemoryStream();
+            var storagePath = GetStoragePath(path);
+            if (File.Exists(storagePath))
+                return new MemoryStream(File.ReadAllBytes(storagePath));
+            return null;
         }
     }
 
-    internal void DoSet(FileCacheReference reference, Action<Stream> action)
+    internal void DoSet(string path, Action<Stream> action)
     {
         lock (_lock)
         {
-            var path = GetPath(reference);
-            var parentDirectory = Path.GetDirectoryName(path);
+            var storagePath = GetStoragePath(path);
+            var parentDirectory = Path.GetDirectoryName(storagePath);
             if (!Directory.Exists(parentDirectory))
                 Directory.CreateDirectory(parentDirectory);
-            using var fileStream = File.Create(path);
+            using var fileStream = File.Create(storagePath);
             action(fileStream);
         }
     }
 
-    internal void DoClear(FileCacheReference reference)
+    internal void DoClear(string path)
     {
-        var path = GetPath(reference);
-        File.Delete(path);
+        var storagePath = GetStoragePath(path);
+        File.Delete(storagePath);
         try
         {
-            for (var parentDirectory = Path.GetDirectoryName(path); parentDirectory != _rootPath; parentDirectory = Path.GetDirectoryName(parentDirectory))
+            for (var parentDirectory = Path.GetDirectoryName(storagePath); parentDirectory != _rootPath; parentDirectory = Path.GetDirectoryName(parentDirectory))
             {
                 Directory.Delete(parentDirectory);
             }
