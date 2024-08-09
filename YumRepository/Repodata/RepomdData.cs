@@ -11,4 +11,6 @@ public record RepomdData
     [XElement("open-size")] public long OpenSize { get; init; }
     [XElement("location")] public Location Location { get; init; }
     [XElement("timestamp")] public long Timestamp { get; init; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    public string ID => $"{Checksum.Value}-{Type}";
 }

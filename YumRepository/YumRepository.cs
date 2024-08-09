@@ -22,8 +22,42 @@ public class YumRepository
         }
     }
 
+    private class RepoData
+    {
+        private readonly IDictionary<string, (RepomdData Data, byte[] Bytes)> _repomdData;
+
+        private byte[]? _repomdXml;
+        public byte[] RepomdXml => _repomdXml ??= LoadRepomdXml();
+
+        public RepoData(IEnumerable<(RepomdData Data, byte[] Bytes)> repomdData)
+        {
+            _repomdData = repomdData.ToDictionary(d => d.Data.ID);
+        }
+
+        public byte[]? GetData(string type)
+        {
+            if (_repomdData.TryGetValue(type, out var t))
+                return t.Bytes;
+            return null;
+        }
+
+        private byte[] LoadRepomdXml()
+        {
+            var repomd = new Repomd
+            {
+                Revision = DateTimeOffset.Now.ToUnixTimeSeconds(),
+                Data = _repomdData.Values.Select(r => r.Data).ToArray(),
+            };
+            var repomdXml = XWriter.ToBytes(repomd);
+            return repomdXml;
+        }
+    }
+
     private readonly GetRpmInformation _getRpmInformation;
     private readonly YumRepositorySource _source;
+
+    private RepoData? _repomdData;
+    private RepoData RepomdData => _repomdData ??= new(GetRepomdData());
 
     public YumRepository(YumRepositorySource source, GetRpmInformation getRpmInformation)
     {
@@ -36,21 +70,13 @@ public class YumRepository
      * {BasePath}/{ConfigName}: the configuration file
      * {BasePath}/repodata/repo.xml: link to other xml files
      * {BasePath}/repodata/*.xml.gz: other xml (gzipped) files
-     *
      */
+
     public IEnumerable<(string Path, Delegate Handler)> GetRoutes(GetWithMimeType getWithMimeType)
     {
-        var repomdData = GetRepomdData().ToImmutableArray();
-        var repomd = new Repomd
-        {
-            Revision = DateTimeOffset.Now.ToUnixTimeSeconds(),
-            Data = repomdData.Select(r => r.Data).ToArray(),
-        };
         yield return ($"{_source.BasePath}/{_source.RepoName}", () => GetConfiguration(getWithMimeType));
-        foreach (var (mdData, bytes) in repomdData)
-            yield return ($"{_source.BasePath}/{mdData.Location.Href}", () => getWithMimeType(bytes, "application/gzip"));
-        var repomdXml = XWriter.ToBytes(repomd);
-        yield return ($"{_source.BasePath}/repodata/repomd.xml", () => getWithMimeType(repomdXml, "application/xml"));
+        yield return ($"{_source.BasePath}/repodata/{{type}}.xml.gz", (string type) => getWithMimeType(RepomdData.GetData(type), "application/gzip"));
+        yield return ($"{_source.BasePath}/repodata/repomd.xml", () => getWithMimeType(RepomdData.RepomdXml, "application/xml"));
         foreach (var localSource in _source.LocalSources)
             yield return ($"{_source.BasePath}/{ToUriPath(localSource)}/{{package}}.rpm", (string package) => GetRpm(localSource, package, getWithMimeType));
     }
@@ -81,15 +107,15 @@ public class YumRepository
         var compressedData = compressedStream.ToArray();
         var rawHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(rawData)).ToLower(), "sha256");
         var compressedHash = new RepomdChecksum(Convert.ToHexString(SHA256.Create().ComputeHash(compressedData)).ToLower(), "sha256");
-        return (new RepomdData
+        var repomdData = new RepomdData
         {
             Checksum = compressedHash,
             OpenChecksum = rawHash,
             Size = compressedData.Length,
             OpenSize = rawData.Length,
             Type = type,
-            Location = new($"repodata/{type}.xml.gz")
-        }, compressedData);
+        };
+        return (repomdData with { Location = new($"repodata/{repomdData.ID}.xml.gz") }, compressedData);
     }
 
     private byte[] GetPrimaryXml(IEnumerable<RpmInfo> rpmInfo)
@@ -136,5 +162,6 @@ enabled=1
 
     public void Reload()
     {
+        _repomdData = null;
     }
 }

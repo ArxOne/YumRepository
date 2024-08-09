@@ -6,11 +6,11 @@ namespace ArxOne.Yum.Repodata;
 public record RepomdChecksum
 {
     [XAttribute("type")] public string? Type { get; set; }
-    [XText] public string? Checksum { get; set; }
+    [XText] public string? Value { get; set; }
 
-    public RepomdChecksum(string checksum, string type)
+    public RepomdChecksum(string value, string type)
     {
-        Checksum = checksum;
+        Value = value;
         Type = type;
     }
 
@@ -25,7 +25,7 @@ public record RepomdChecksum
         if (checksum is null)
             return false;
         Type = algorithm;
-        Checksum = checksum;
+        Value = checksum;
         return true;
     }
 }
