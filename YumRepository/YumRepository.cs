@@ -55,7 +55,7 @@ public class YumRepository
             yield return ($"{_source.BasePath}/{ToUriPath(localSource)}/{{package}}.rpm", (string package) => GetRpm(localSource, package, getWithMimeType));
     }
 
-    internal static string ToUriPath(string localSource)
+    private static string ToUriPath(string localSource)
     {
         return localSource.Replace('\\', '/');
     }

@@ -20,6 +20,7 @@ public record Package
     [XElement("time")] public Time Time { get; init; }
     [XElement("size")] public Size Size { get; init; }
     [XElement("location")] public Location Location { get; init; }
+    [XElement("format")] public Format Format { get; init; }
 
     public static Package ForMetadata(IReadOnlyDictionary<string, object?> header, long? rpmSize, string sha256Hash)
     {
@@ -36,6 +37,7 @@ public record Package
             Url = header.GetTag<string>("url"),
             Time = new(header),
             Size = new(header, rpmSize),
+            Format = new(header),
         };
     }
 

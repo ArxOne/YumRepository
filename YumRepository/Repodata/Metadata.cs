@@ -3,7 +3,7 @@
 namespace ArxOne.Yum.Repodata;
 
 [XElement("metadata", "http://linux.duke.edu/metadata/common")]
-public class Metadata
+public record Metadata
 {
     [XAttribute("packages")]
     public int PackagesCount { get; set; }

@@ -16,10 +16,3 @@ public record Version
         Rel = header.GetTag<int>("release");
     }
 }
-
-public record OtherInfoPackage
-{
-    public OtherInfoPackage(IReadOnlyDictionary<string, object?> header)
-    { }
-
-}

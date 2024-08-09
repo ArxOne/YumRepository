@@ -3,7 +3,7 @@
 namespace ArxOne.Yum.Repodata;
 
 [XElement("repomd", "http://linux.duke.edu/metadata/repo")]
-public class Repomd
+public record Repomd
 {
     [XElement("revision")]
     public long Revision { get; init; }

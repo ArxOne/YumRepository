@@ -2,7 +2,7 @@
 
 namespace ArxOne.Yum.Repodata;
 
-public class RepomdData
+public record RepomdData
 {
     [XAttribute("type")] public string Type { get; init; }
     [XElement("checksum")] public RepomdChecksum Checksum { get; init; }
