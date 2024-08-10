@@ -120,7 +120,7 @@ public class YumRepository
         yield return GetRepomdData(GetOtherXml(rpmInfo), "other");
     }
 
-    private (RepomdData Data, byte[] Bytes) GetRepomdData(byte[] rawData, string type)
+    private static (RepomdData Data, byte[] Bytes) GetRepomdData(byte[] rawData, string type)
     {
         using var compressedStream = new MemoryStream();
         using (var compressionStream = new GZipStream(compressedStream, CompressionLevel.SmallestSize))
@@ -139,23 +139,28 @@ public class YumRepository
         return (repomdData with { Location = new($"repodata/{repomdData.ID}.xml.gz") }, compressedData);
     }
 
-    private byte[] GetPrimaryXml(IEnumerable<RpmInfo> rpmInfo)
+    private static byte[] GetPrimaryXml(IEnumerable<RpmInfo> rpmInfo)
     {
         var metadata = new Metadata(rpmInfo.Select(r => r.GetForMetadata()));
         return XWriter.ToBytes(metadata);
     }
 
-    private byte[] GetOtherXml(IEnumerable<RpmInfo> rpmInfo)
+    private static byte[] GetOtherXml(IEnumerable<RpmInfo> rpmInfo)
     {
         var metadata = new Metadata(rpmInfo.Select(r => r.GetForOtherdata()));
         return XWriter.ToBytes(metadata);
     }
 
-    private IEnumerable<RpmInfo> GetRpmInfo()
+    private IEnumerable<string> GetRpmFiles()
     {
         foreach (var localSource in _source.LocalSources)
             foreach (var rpmPath in Directory.GetFiles(localSource, "*.rpm"))
-                yield return GetRpmInfo(rpmPath);
+                yield return rpmPath;
+    }
+
+    private IEnumerable<RpmInfo> GetRpmInfo()
+    {
+        return GetRpmFiles().AsParallel().Select(GetRpmInfo);
     }
 
     private RpmInfo GetRpmInfo(string rpmPath) => _source.Cache.Get(rpmPath, LoadRpmInfo);
