@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using ArxOne.Yum.Cache;
 using ArxOne.Yum.Repodata;
 using ArxOne.Yum.Xml;
