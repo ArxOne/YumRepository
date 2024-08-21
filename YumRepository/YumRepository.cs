@@ -94,7 +94,7 @@ public class YumRepository
 
     public IEnumerable<(string Path, Delegate Handler)> GetRoutes(GetWithMimeType getWithMimeType)
     {
-        yield return ($"{_source.BasePath}/{_source.RepoName}", () => GetConfiguration(getWithMimeType));
+        yield return (_source.RepoPath, () => GetConfiguration(getWithMimeType));
         yield return ($"{_source.BasePath}/repodata/{{type}}.xml.gz", (string type) => getWithMimeType(RepomdData.GetData(type), "application/gzip"));
         yield return ($"{_source.BasePath}/repodata/repomd.xml", () => getWithMimeType(RepomdData.RepomdXml, "application/xml"));
         foreach (var localSource in _source.LocalSources)

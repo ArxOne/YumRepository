@@ -4,19 +4,19 @@ namespace ArxOne.Yum;
 
 public record YumRepositorySource
 {
-    public string BasePath { get; set; }
+    public string BasePath { get; init; }
 
-    public List<string> LocalSources { get; set; }
+    public List<string> LocalSources { get; init; }
 
-    public string ID { get; set; }
+    public string ID { get; init; }
 
-    public string Name { get; set; }
+    public string Name { get; init; }
 
-    public string RepoName { get; set; }
+    public string? RepoPath { get; init; }
 
-    public Func<Uri> GetRequestUri { get; set; }
+    public Func<Uri> GetRequestUri { get; init; }
 
-    public FileCache Cache { get; set; }
+    public FileCache Cache { get; init; }
 
     public YumRepositorySource(Func<Uri> getRequestUri, string basePath, params string[] localSources)
     {
@@ -24,7 +24,7 @@ public record YumRepositorySource
         BasePath = basePath;
         Name = basePath[(basePath.IndexOf('/') + 1)..];
         ID = Name.Replace("/", "");
-        RepoName = ID + ".repo";
+        RepoPath = $"{basePath}/{ID}.repo";
         LocalSources = localSources.ToList();
     }
 }
