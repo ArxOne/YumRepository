@@ -12,7 +12,7 @@ public record Version
     public Version(IReadOnlyDictionary<string, object?> header)
     {
         Ver = header.GetTag<string>("version")!;
-        Epoch = header.GetTag<long?>("buildtime");
+        //Epoch = header.GetTag<long?>("buildtime"); //-- a test to avoid error on Fedora upgrades
         Rel = header.GetTag<int>("release");
     }
 }

@@ -132,5 +132,4 @@ public static class XWriter
     {
         return propertyInfo.GetCustomAttribute<XTextAttribute>() is not null;
     }
-
 }

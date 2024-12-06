@@ -12,7 +12,7 @@ namespace ArxOne.Yum;
 
 public class YumRepository
 {
-    private record RpmInfo
+    private sealed record RpmInfo
     {
         public IReadOnlyDictionary<string, object?> Header { get; }
         public string RpmPath { get; }
@@ -34,15 +34,15 @@ public class YumRepository
             return Package.ForOtherdata(Header, Sha256Hash);
         }
 
-        public void Deconstruct(out IReadOnlyDictionary<string, object?> Header, out string RpmPath, out string Sha256Hash)
+        public void Deconstruct(out IReadOnlyDictionary<string, object?> header, out string rpmPath, out string sha256Hash)
         {
-            Header = this.Header;
-            RpmPath = this.RpmPath;
-            Sha256Hash = this.Sha256Hash;
+            header = Header;
+            rpmPath = RpmPath;
+            sha256Hash = Sha256Hash;
         }
     }
 
-    private class RepoData
+    private sealed class RepoData
     {
         private readonly IDictionary<string, (RepomdData Data, byte[] Bytes)> _repomdData;
 
@@ -166,7 +166,7 @@ public class YumRepository
 
     private RpmInfo LoadRpmInfo(string rpmPath)
     {
-        var (signature, header) = _getRpmInformation(rpmPath);
+        var (_, header) = _getRpmInformation(rpmPath);
         using var rpmStream = File.OpenRead(rpmPath);
         var sha256Hash = Convert.ToHexString(SHA256.Create().ComputeHash(rpmStream)).ToLower();
         var rpmInfo = new RpmInfo(header, rpmPath, sha256Hash);
