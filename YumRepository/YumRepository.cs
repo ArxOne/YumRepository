@@ -191,6 +191,7 @@ enabled=1
 
     public void Reload()
     {
-        _repomdData = null;
+        if (_repomdData is not null)
+            _repomdData = new(GetRepomdData());
     }
 }
